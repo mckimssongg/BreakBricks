@@ -2,8 +2,6 @@
 #include <winuser.h>
 
 /* Crearemos un juego de breakbricks*/
-/* Haremos una bola que rebote */
-/* Haremos que la bola rebote en la ventana */
 
 /* Definimos una estructura para la bola */
 struct Bola {
