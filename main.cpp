@@ -1,39 +1,191 @@
 #include <windows.h>
+#include <winuser.h>
 
-/* Identificador para el boton */
-#define ID_BUTTON 1001
-		
+/* Crearemos un juego de breakbricks*/
+/* Haremos una bola que rebote */
+/* Haremos que la bola rebote en la ventana */
+
+/* Definimos una estructura para la bola */
+struct Bola {
+	int x, y;
+	int dx, dy;
+	int ancho, alto;
+	int velocidad;
+};
+
+/* Definimos una estructura para la paleta */
+struct Paleta {
+	int x, y;
+	int ancho, alto;
+	int velocidad;
+};
+
+/* Definimos una estructura para la ventana */
+struct Ventana {
+	int ancho, alto;
+};
+
+/* Definimos una estructura para el juego */
+struct Juego {
+	Bola bola;
+	Paleta paleta;
+	Ventana ventana;
+};
+
+/* Definimos una estructura para el juego */
+Juego juego;
+
+/* Definimos una estructura para la ventana */
+#define IDC_BUTTON1 1001
+/*
+ * Window field offsets for GetWindowLong()
+ */
+#define GWL_WNDPROC         (-4)
+
+#ifdef _WIN64
+
+#undef GWL_WNDPROC
+#undef GWL_HINSTANCE
+#undef GWL_HWNDPARENT
+#undef GWL_USERDATA
+
+#endif /* _WIN64 */
+
+#define GWLP_WNDPROC        (-4)
+
+#define GWL_HINSTANCE (-6)
+
 /* This is where all the input to the window goes to */
 LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) {
+	/* Handle the message */
 	switch(Message) {
-		
-        /* Crear el boton */
+		 
+		/* Upon creation, we get a message for that */
 		case WM_CREATE: {
-			HWND hButton = CreateWindow("BUTTON", "Click me!",
-			WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-			10, 10, 100, 39,
-			hwnd, (HMENU)ID_BUTTON, GetModuleHandle(NULL), NULL);
+			/* Get the size of the client area */
+			RECT clientRect;
+			GetClientRect(hwnd, &clientRect);
+			juego.ventana.ancho = clientRect.right - clientRect.left;
+			juego.ventana.alto = clientRect.bottom - clientRect.top;
+			
+			/* Inicializamos la bola */
+			juego.bola.x = juego.ventana.ancho / 2;
+			juego.bola.y = juego.ventana.alto / 2;
+			juego.bola.ancho = 10;
+			juego.bola.alto = 10;
+			juego.bola.dx = 1;
+			juego.bola.dy = 1;
+			juego.bola.velocidad = 5;
+			
+			/* Inicializamos la paleta */
+			juego.paleta.ancho = 100;
+			juego.paleta.alto = 10;
+			juego.paleta.x = juego.ventana.ancho / 2 - juego.paleta.ancho / 2;
+			juego.paleta.y = juego.ventana.alto - juego.paleta.alto;
+			juego.paleta.velocidad = 10;
+			
+			/* Inicializamos el timer */
+			SetTimer(hwnd, 1, 1000 / 30, NULL);
+			break;
+		}
+
+		/* This is called many times a second and should be used for game logic */
+		case WM_TIMER: {
+			/* Mueve la bola */
+			juego.bola.x += juego.bola.dx * juego.bola.velocidad;
+			juego.bola.y += juego.bola.dy * juego.bola.velocidad;
+			
+			/* Revisa si la bola choca con la ventana */
+			if(juego.bola.x < 0 || juego.bola.x + juego.bola.ancho > juego.ventana.ancho) {
+				juego.bola.dx *= -1;
+			}
+			if(juego.bola.y < 0 || juego.bola.y + juego.bola.alto > juego.ventana.alto) {
+				juego.bola.dy *= -1;
+			}
+			
+			/* Revisa si la bola choca con la paleta */
+			if(juego.bola.x + juego.bola.ancho >= juego.paleta.x && juego.bola.x <= juego.paleta.x + juego.paleta.ancho &&
+			   juego.bola.y + juego.bola.alto >= juego.paleta.y && juego.bola.y <= juego.paleta.y + juego.paleta.alto) {
+				juego.bola.dy *= -1;
+			}
+			
+			/* Repinta la ventana */
+			InvalidateRect(hwnd, NULL, TRUE);
 			break;
 		}
 		
-	    case WM_COMMAND: {
-	        /* Manejar los eventos del boton */
-	        switch(LOWORD(wParam)) {
-	            case ID_BUTTON: {
-	                /* El usuario hizo clic en el boton */
-	                MessageBox(hwnd, "Hello, world!", "Button clicked", MB_OK);
-	                break;
-	            }
-	        }
-	        break;
-	    }
+		/* If the window is resized, we should take note of the new client area */
+		case WM_SIZE: {
+			juego.ventana.ancho = LOWORD(lParam);
+			juego.ventana.alto = HIWORD(lParam);
+			break;
+		}
+		
+		/* If the window is being painted, we should draw stuff */
+		case WM_PAINT: {
+			/* Get a device context to paint with */
+			PAINTSTRUCT ps;
+			HDC hdc = BeginPaint(hwnd, &ps);
+			
+			/* Fill the background with white */
+			RECT clientRect;
+			GetClientRect(hwnd, &clientRect);
+			HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
+			FillRect(hdc, &clientRect, hBrush);
+			
+			/* Dibuja la paleta */
+			Rectangle(hdc, juego.paleta.x, juego.paleta.y, juego.paleta.x + juego.paleta.ancho, juego.paleta.y + juego.paleta.alto);
 
-		/* Upon destruction, tell the main thread to stop */
+			/* Dibuja la bola */
+			Ellipse(hdc, juego.bola.x, juego.bola.y, juego.bola.x + juego.bola.ancho, juego.bola.y + juego.bola.alto);
+			
+			/* End painting */
+			EndPaint(hwnd, &ps);
+			break;
+		}
+
+		/* If a key is pressed, we should react to it */
+		case WM_KEYDOWN: {
+			/* If the left arrow key is pressed */
+			if(wParam == VK_LEFT) {
+				juego.paleta.x -= juego.paleta.velocidad;
+				if(juego.paleta.x < 0) {
+					juego.paleta.x = 0;
+				}
+			}
+			
+			/* If the right arrow key is pressed */
+			if(wParam == VK_RIGHT) {
+				juego.paleta.x += juego.paleta.velocidad;
+				if(juego.paleta.x + juego.paleta.ancho > juego.ventana.ancho) {
+					juego.paleta.x = juego.ventana.ancho - juego.paleta.ancho;
+				}
+			}
+
+			/* Repinta la ventana */
+			InvalidateRect(hwnd, NULL, TRUE);
+			break;
+		}
+
+		/* Si se presiona el boton */
+		case WM_COMMAND: {
+			switch(LOWORD(wParam))
+			{
+				case IDC_BUTTON1:
+					/* Inicia el timer */
+					SetTimer(hwnd, 1, 10, NULL);
+					break;
+			}
+			break;
+		}
+
+		/* If the window is being destroyed, we should clean up */
 		case WM_DESTROY: {
+			/* Kill the application, this sends a WM_QUIT message */
 			PostQuitMessage(0);
 			break;
 		}
-		
+
 		/* All other messages (a lot of them) are processed using default procedures */
 		default:
 			return DefWindowProc(hwnd, Message, wParam, lParam);
