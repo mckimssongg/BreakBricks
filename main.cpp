@@ -1,9 +1,33 @@
 #include <windows.h>
 
+/* Identificador para el boton */
+#define ID_BUTTON 1001
+		
 /* This is where all the input to the window goes to */
 LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) {
 	switch(Message) {
 		
+        /* Crear el boton */
+		case WM_CREATE: {
+			HWND hButton = CreateWindow("BUTTON", "Click me!",
+			WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+			10, 10, 100, 39,
+			hwnd, (HMENU)ID_BUTTON, GetModuleHandle(NULL), NULL);
+			break;
+		}
+		
+	    case WM_COMMAND: {
+	        /* Manejar los eventos del boton */
+	        switch(LOWORD(wParam)) {
+	            case ID_BUTTON: {
+	                /* El usuario hizo clic en el boton */
+	                MessageBox(hwnd, "Hello, world!", "Button clicked", MB_OK);
+	                break;
+	            }
+	        }
+	        break;
+	    }
+
 		/* Upon destruction, tell the main thread to stop */
 		case WM_DESTROY: {
 			PostQuitMessage(0);

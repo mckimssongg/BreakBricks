@@ -1,1 +1,4 @@
 BreakBricks.layout
+BreakBricks.exe
+*.o
+Makefile.win
