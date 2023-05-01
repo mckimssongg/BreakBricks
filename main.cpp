@@ -23,12 +23,24 @@ struct Ventana {
 	int ancho, alto;
 };
 
-/* Definimos una estructura para el juego */
-struct Juego {
-	Bola bola;
-	Paleta paleta;
-	Ventana ventana;
+
+/* Definimos una estructura para el ladrillo */
+struct Ladrillo {
+    int x, y;
+    int ancho, alto;
+    bool roto;
 };
+
+/* Definimos una estructura para el juego */
+#define NUM_LADRILLOS 60
+
+struct Juego {
+    Bola bola;
+    Paleta paleta;
+    Ladrillo ladrillos[NUM_LADRILLOS];
+    Ventana ventana;
+};
+
 
 /* Definimos una estructura para el juego */
 Juego juego;
@@ -82,6 +94,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 			juego.paleta.y = juego.ventana.alto - juego.paleta.alto;
 			juego.paleta.velocidad = 10;
 			
+			for (int i = 0; i < NUM_LADRILLOS; i++) {
+				juego.ladrillos[i].ancho = 50;
+				juego.ladrillos[i].alto = 20;
+				juego.ladrillos[i].x = (i % 12) * juego.ladrillos[i].ancho + juego.ladrillos[i].ancho;
+				juego.ladrillos[i].y = (i / 12) * juego.ladrillos[i].alto + juego.ladrillos[i].alto * 3;
+				juego.ladrillos[i].roto = false;
+			}
+
 			/* Inicializamos el timer */
 			SetTimer(hwnd, 1, 1000 / 30, NULL);
 			break;
@@ -107,6 +127,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 				juego.bola.dy *= -1;
 			}
 			
+			for (int i = 0; i < NUM_LADRILLOS; i++) {
+				if (!juego.ladrillos[i].roto) {
+					if (juego.bola.x + juego.bola.ancho >= juego.ladrillos[i].x && juego.bola.x <= juego.ladrillos[i].x + juego.ladrillos[i].ancho &&
+						juego.bola.y + juego.bola.alto >= juego.ladrillos[i].y && juego.bola.y <= juego.ladrillos[i].y + juego.ladrillos[i].alto) {
+						juego.bola.dy *= -1;
+						juego.ladrillos[i].roto = true;
+					}
+				}
+			}
+
 			/* Repinta la ventana */
 			InvalidateRect(hwnd, NULL, TRUE);
 			break;
@@ -137,6 +167,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 			/* Dibuja la bola */
 			Ellipse(hdc, juego.bola.x, juego.bola.y, juego.bola.x + juego.bola.ancho, juego.bola.y + juego.bola.alto);
 			
+			for (int i = 0; i < NUM_LADRILLOS; i++) {
+				if (!juego.ladrillos[i].roto) {
+					Rectangle(hdc, juego.ladrillos[i].x, juego.ladrillos[i].y, juego.ladrillos[i].x + juego.ladrillos[i].ancho, juego.ladrillos[i].y + juego.ladrillos[i].alto);
+				} else {
+					HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
+					RECT rect = {juego.ladrillos[i].x, juego.ladrillos[i].y, juego.ladrillos[i].x + juego.ladrillos[i].ancho, juego.ladrillos[i].y + juego.ladrillos[i].alto};
+					FillRect(hdc, &rect, hBrush);
+					DeleteObject(hBrush);
+				}
+			}
+
 			/* End painting */
 			EndPaint(hwnd, &ps);
 			break;
